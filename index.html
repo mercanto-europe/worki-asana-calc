@@ -10,7 +10,7 @@
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   :root {
-    --bg: #f0f2f7;
+    --bg: #ffffff;
     --card: #ffffff;
     --primary: #4338ca;
     --primary-light: #e0e7ff;
@@ -21,7 +21,7 @@
     --text-mid: #475569;
     --text-light: #94a3b8;
     --border: #e2e8f0;
-    --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 12px rgba(0,0,0,0.04);
+    --shadow: 0 1px 3px rgba(0,0,0,0.04), 0 2px 8px rgba(0,0,0,0.06);
     --shadow-lg: 0 4px 24px rgba(67,56,202,0.12);
     --radius: 10px;
     --font: 'DM Sans', -apple-system, sans-serif;
@@ -71,6 +71,7 @@
   .card {
     background: var(--card);
     border-radius: var(--radius);
+    border: 1.5px solid var(--border);
     box-shadow: var(--shadow);
     padding: 24px;
     margin-bottom: 16px;
