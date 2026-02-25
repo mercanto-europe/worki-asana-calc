@@ -348,13 +348,30 @@
   /* Print styles */
   @media print {
     body { background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .container { max-width: 100%; padding: 0; }
-    .card { box-shadow: none; border: 1px solid #e2e8f0; break-inside: avoid; }
-    .deal-types, #section-new, #section-transfer, .action-bar, .detail-toggle, .footer { display: none !important; }
-    .result-card.primary, .result-card.accent { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .detail-section { display: block !important; }
-    .header { margin-bottom: 16px; }
+    .container { max-width: 100%; padding: 0 16px; }
+    .card { box-shadow: none; border: 1px solid #e2e8f0; break-inside: avoid; page-break-inside: avoid; }
+    .header { margin-bottom: 12px; }
+
+    /* Hide interactive elements */
+    .deal-types, .action-bar, .detail-toggle, .footer, #btnOpenPrint { display: none !important; }
+    #section-new, #section-transfer, #checkboxes { display: none !important; }
+
+    /* Hide settings card labels but keep the card for context */
+    .card:first-of-type { display: none !important; }
+
+    /* Show print summary with parameters */
     .print-summary { display: block !important; }
+
+    /* Force show detail section */
+    .detail-section { display: block !important; }
+
+    /* Preserve colored result cards */
+    .result-card.primary, .result-card.accent { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .result-card { break-inside: avoid; }
+    .results-grid { break-inside: avoid; }
+
+    /* Clean up discount section for print */
+    #customerDiscount { border: none !important; background: none !important; font-weight: 700 !important; width: 40px !important; }
   }
 
   .print-summary {
@@ -513,6 +530,7 @@
     <div class="detail-section" id="detailSection" style="display:none"></div>
     <div class="action-bar">
       <button class="action-btn" id="btnPrint">🖨️ Tisk / PDF</button>
+      <a class="action-btn" id="btnOpenPrint" href="" target="_blank" style="display:none;text-decoration:none;text-align:center">🖨️ Otevřít pro tisk</a>
       <button class="action-btn" id="btnCopy">📋 Kopírovat výsledky</button>
     </div>
   </div>
@@ -787,7 +805,15 @@ function renderDetail(r) {
 recalc();
 
 // Bind action buttons
-document.getElementById('btnPrint').addEventListener('click', function() { openForPrint(); });
+var isInIframe = window.self !== window.top;
+if (isInIframe) {
+  document.getElementById('btnPrint').style.display = 'none';
+  var openBtn = document.getElementById('btnOpenPrint');
+  openBtn.style.display = 'flex';
+  openBtn.href = window.location.href;
+} else {
+  document.getElementById('btnPrint').addEventListener('click', function() { openForPrint(); });
+}
 document.getElementById('btnCopy').addEventListener('click', function() { copyResults(); });
 
 function openForPrint() {
