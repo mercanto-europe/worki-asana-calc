@@ -307,6 +307,35 @@
   .total-row.accent-val .val { color: var(--accent-dark); font-weight: 700; }
   .total-row.border-top { border-top: 1px solid #c7d2fe; margin-top: 6px; padding-top: 8px; }
 
+  /* Action buttons */
+  .action-bar {
+    display: flex;
+    gap: 10px;
+    margin-top: 16px;
+  }
+  .action-btn {
+    flex: 1;
+    padding: 12px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--text-mid);
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .action-btn:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: var(--primary-light);
+  }
+
   .footer {
     text-align: center;
     font-size: 11px;
@@ -314,6 +343,30 @@
     margin-top: 20px;
     padding-bottom: 12px;
   }
+
+  /* Print styles */
+  @media print {
+    body { background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .container { max-width: 100%; padding: 0; }
+    .card { box-shadow: none; border: 1px solid #e2e8f0; break-inside: avoid; }
+    .deal-types, #section-new, #section-transfer, .action-bar, .detail-toggle, .footer { display: none !important; }
+    .result-card.primary, .result-card.accent { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .detail-section { display: block !important; }
+    .header { margin-bottom: 16px; }
+    .print-summary { display: block !important; }
+  }
+
+  .print-summary {
+    display: none;
+    background: #f8fafc;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+    font-size: 13px;
+    color: var(--text-mid);
+  }
+  .print-summary strong { color: var(--text); }
+  .print-date { font-size: 11px; color: var(--text-light); margin-top: 8px; }
 </style>
 </head>
 <body>
@@ -440,10 +493,27 @@
   <div class="card">
     <div class="card-title">Výsledky kalkulace</div>
     <div class="results-grid" id="resultsGrid"></div>
+
+    <div style="background:#f8fafc;border:1.5px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <label class="field-label" style="margin:0;white-space:nowrap">🏷️ Sleva pro zákazníka</label>
+        <div style="display:flex;align-items:center;gap:6px">
+          <input type="number" id="customerDiscount" value="0" min="0" max="100" step="0.5" oninput="recalc()" style="width:80px;text-align:center">
+          <span style="font-weight:600;color:var(--text-mid)">%</span>
+        </div>
+        <span style="font-size:12px;color:var(--text-light)">z list price</span>
+      </div>
+      <div id="discountResult" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)"></div>
+    </div>
+    <div class="print-summary" id="printSummary"></div>
     <button class="detail-toggle" id="detailToggle" onclick="toggleDetail()">
       ▼ Zobrazit detail výpočtu
     </button>
     <div class="detail-section" id="detailSection" style="display:none"></div>
+    <div class="action-bar">
+      <button class="action-btn" onclick="printCalc()">🖨️ Tisk / PDF</button>
+      <button class="action-btn" onclick="copyResults()">📋 Kopírovat výsledky</button>
+    </div>
   </div>
 
   <div class="footer">Asana Partner Pricing Calculator · Worki · <span id="yearFooter"></span></div>
@@ -610,6 +680,11 @@ function calcTransfer() {
 }
 
 function renderResults(r) {
+  const custDisc = parseFloat(document.getElementById('customerDiscount').value) || 0;
+  const custPrice = r.listPriceARR * (1 - custDisc / 100);
+  const margin = custPrice - r.partnerBuyPrice;
+  const marginPct = custPrice > 0 ? (margin / custPrice) * 100 : 0;
+
   document.getElementById('resultsGrid').innerHTML = `
     <div class="result-card primary">
       <div class="result-label">Celková nákupní cena (roční)</div>
@@ -628,6 +703,32 @@ function renderResults(r) {
       <div class="result-value">${fmt(r.savings)}</div>
     </div>
   `;
+
+  const discResult = document.getElementById('discountResult');
+  if (custDisc > 0) {
+    const profitable = margin > 0;
+    discResult.style.display = 'block';
+    discResult.innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;text-align:center">
+        <div>
+          <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.3px;color:var(--text-light);margin-bottom:4px">Cena pro zákazníka</div>
+          <div style="font-family:var(--mono);font-size:18px;font-weight:700;color:var(--text)">${fmt(custPrice)}</div>
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.3px;color:var(--text-light);margin-bottom:4px">Vaše marže</div>
+          <div style="font-family:var(--mono);font-size:18px;font-weight:700;color:${profitable ? 'var(--accent-dark)' : '#dc2626'}">${fmt(margin)}</div>
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.3px;color:var(--text-light);margin-bottom:4px">Marže %</div>
+          <div style="font-family:var(--mono);font-size:18px;font-weight:700;color:${profitable ? 'var(--accent-dark)' : '#dc2626'}">${marginPct.toFixed(1)}%</div>
+        </div>
+      </div>
+      ${!profitable ? '<div style="margin-top:10px;padding:8px 12px;background:#fef2f2;border-radius:6px;font-size:12px;color:#dc2626;font-weight:600;text-align:center">⚠️ Záporná marže – sleva přesahuje partnerský discount</div>' : ''}
+      ${profitable && marginPct < 5 ? '<div style="margin-top:10px;padding:8px 12px;background:#fffbeb;border-radius:6px;font-size:12px;color:#d97706;font-weight:600;text-align:center">⚠️ Nízká marže – zvažte úpravu slevy</div>' : ''}
+    `;
+  } else {
+    discResult.style.display = 'none';
+  }
 }
 
 function toggleDetail() {
@@ -683,6 +784,61 @@ function renderDetail(r) {
 
 // Initial render
 recalc();
+
+function printCalc() {
+  const r = calculate();
+  const tier = val('partnerTier');
+  let dealLabel = dealType === 'new' ? 'Nový obchod' : dealType === 'mta' ? 'MTA (Monthly → Annual)' : 'ATA (Annual → Annual)';
+  let params = `<strong>Typ:</strong> ${dealLabel} · <strong>Tier:</strong> ${tier.charAt(0).toUpperCase() + tier.slice(1)} · <strong>Měna:</strong> ${val('currency')}`;
+  if (dealType === 'new') {
+    params += `<br><strong>Tarif:</strong> ${val('newTariff')} (${val('newBilling')}) · <strong>Licence:</strong> ${num('newSeats')}`;
+  } else {
+    params += `<br><strong>Stávající:</strong> ${num('currentSeats')}× ${val('currentTariff')} ${dealType === 'mta' ? 'Monthly' : 'Annual'} → <strong>Nové:</strong> ${num('proposedSeats')}× ${val('proposedTariff')} Annual`;
+  }
+  params += `<div class="print-date">Vygenerováno: ${new Date().toLocaleDateString('cs-CZ')} ${new Date().toLocaleTimeString('cs-CZ', {hour:'2-digit',minute:'2-digit'})}</div>`;
+  document.getElementById('printSummary').innerHTML = params;
+
+  // Ensure detail is rendered for print
+  renderDetail(r);
+  window.print();
+}
+
+function copyResults() {
+  const r = calculate();
+  const tier = val('partnerTier');
+  let dealLabel = dealType === 'new' ? 'Nový obchod' : dealType === 'mta' ? 'MTA' : 'ATA';
+  let text = `ASANA PRICING – ${dealLabel} (${tier})\n`;
+  text += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+  text += `List Price ARR: ${fmt(r.listPriceARR)}\n`;
+  text += `Partner Buy Price: ${fmt(r.partnerBuyPrice)}\n`;
+  text += `Efektivní sleva: ${(r.discount * 100).toFixed(2)}%\n`;
+  text += `Úspora: ${fmt(r.savings)}\n`;
+  text += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+  r.components.forEach((c, i) => {
+    text += `\n${c.name}: ${c.description}\n`;
+    text += `  List: ${fmt(c.listPrice)} → Partner: ${fmt(c.partnerPrice)} (${(c.discount*100).toFixed(0)}%)\n`;
+  });
+  text += `\n📅 ${new Date().toLocaleDateString('cs-CZ')}`;
+
+  const custDisc = parseFloat(document.getElementById('customerDiscount').value) || 0;
+  if (custDisc > 0) {
+    const custPrice = r.listPriceARR * (1 - custDisc / 100);
+    const margin = custPrice - r.partnerBuyPrice;
+    const marginPct = custPrice > 0 ? (margin / custPrice) * 100 : 0;
+    text += `\n\n🏷️ SLEVA PRO ZÁKAZNÍKA: ${custDisc}%\n`;
+    text += `Cena pro zákazníka: ${fmt(custPrice)}\n`;
+    text += `Marže: ${fmt(margin)} (${marginPct.toFixed(1)}%)`;
+  }
+
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector('.action-btn:last-child');
+    const orig = btn.innerHTML;
+    btn.innerHTML = '✅ Zkopírováno!';
+    btn.style.borderColor = 'var(--accent)';
+    btn.style.color = 'var(--accent-dark)';
+    setTimeout(() => { btn.innerHTML = orig; btn.style.borderColor = ''; btn.style.color = ''; }, 2000);
+  });
+}
 </script>
 </body>
 </html>
