@@ -786,13 +786,33 @@ function renderDetail(r) {
 // Initial render
 recalc();
 
+// Auto-print if opened with ?print parameter
+if (window.location.search.includes('print=1')) {
+  setTimeout(() => {
+    const r = calculate();
+    const tier = val('partnerTier');
+    let dealLabel = dealType === 'new' ? 'Nový obchod' : dealType === 'mta' ? 'MTA (Monthly → Annual)' : 'ATA (Annual → Annual)';
+    let params = `<strong>Typ:</strong> ${dealLabel} · <strong>Tier:</strong> ${tier.charAt(0).toUpperCase() + tier.slice(1)} · <strong>Měna:</strong> ${val('currency')}`;
+    if (dealType === 'new') {
+      params += `<br><strong>Tarif:</strong> ${val('newTariff')} (${val('newBilling')}) · <strong>Licence:</strong> ${num('newSeats')}`;
+    } else {
+      params += `<br><strong>Stávající:</strong> ${num('currentSeats')}× ${val('currentTariff')} ${dealType === 'mta' ? 'Monthly' : 'Annual'} → <strong>Nové:</strong> ${num('proposedSeats')}× ${val('proposedTariff')} Annual`;
+    }
+    params += `<div class="print-date">Vygenerováno: ${new Date().toLocaleDateString('cs-CZ')} ${new Date().toLocaleTimeString('cs-CZ', {hour:'2-digit',minute:'2-digit'})}</div>`;
+    document.getElementById('printSummary').innerHTML = params;
+    renderDetail(r);
+    window.print();
+  }, 500);
+}
+
 function openForPrint() {
-  // If inside iframe, open in new window first
   if (window.self !== window.top) {
-    window.open(window.location.href, '_blank');
+    // Inside iframe - open in new window with print trigger
+    const url = window.location.href.split('?')[0] + '?print=1';
+    window.open(url, '_blank');
     return;
   }
-  // If already in standalone window, print directly
+  // Standalone - print directly
   const r = calculate();
   const tier = val('partnerTier');
   let dealLabel = dealType === 'new' ? 'Nový obchod' : dealType === 'mta' ? 'MTA (Monthly → Annual)' : 'ATA (Annual → Annual)';
