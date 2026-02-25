@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Asana Pricing Calculator</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f0f2f7;
+    --card: #ffffff;
+    --primary: #4338ca;
+    --primary-light: #e0e7ff;
+    --primary-hover: #3730a3;
+    --accent: #10b981;
+    --accent-dark: #059669;
+    --text: #1e293b;
+    --text-mid: #475569;
+    --text-light: #94a3b8;
+    --border: #e2e8f0;
+    --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 12px rgba(0,0,0,0.04);
+    --shadow-lg: 0 4px 24px rgba(67,56,202,0.12);
+    --radius: 10px;
+    --font: 'DM Sans', -apple-system, sans-serif;
+    --mono: 'Space Mono', monospace;
+  }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .container {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 24px 16px;
+  }
+
+  /* Header */
+  .header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+  .header-icon {
+    width: 44px; height: 44px;
+    background: var(--primary);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 20px;
+  }
+  .header h1 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+  }
+  .header p {
+    font-size: 13px;
+    color: var(--text-light);
+    margin-top: 2px;
+  }
+
+  /* Cards */
+  .card {
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 24px;
+    margin-bottom: 16px;
+  }
+  .card-title {
+    font-size: 15px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-light);
+    margin-bottom: 16px;
+  }
+
+  /* Grid */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  @media (max-width: 600px) {
+    .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  }
+
+  /* Form controls */
+  label.field-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-mid);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+  select, input[type="number"], input[type="text"] {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    font-family: var(--font);
+    font-size: 14px;
+    color: var(--text);
+    background: #fff;
+    transition: border-color 0.15s;
+    outline: none;
+  }
+  select:focus, input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(67,56,202,0.1);
+  }
+  input:disabled {
+    background: #f8fafc;
+    color: var(--text-light);
+    cursor: not-allowed;
+  }
+
+  /* Deal type buttons */
+  .deal-types { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  @media (max-width: 600px) { .deal-types { grid-template-columns: 1fr; } }
+  .deal-btn {
+    padding: 14px 12px;
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    background: #fff;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: left;
+  }
+  .deal-btn:hover { border-color: var(--primary); }
+  .deal-btn.active {
+    border-color: var(--primary);
+    background: var(--primary-light);
+  }
+  .deal-btn .deal-label {
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--text);
+  }
+  .deal-btn .deal-sub {
+    font-size: 12px;
+    color: var(--text-light);
+    margin-top: 2px;
+  }
+
+  /* Checkboxes */
+  .checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    cursor: pointer;
+  }
+  .checkbox-row input[type="checkbox"] {
+    width: 16px; height: 16px;
+    accent-color: var(--primary);
+    cursor: pointer;
+  }
+  .checkbox-row span { font-size: 13px; color: var(--text-mid); }
+
+  /* Divider */
+  .divider { border-top: 1px solid var(--border); margin: 20px 0; }
+
+  /* Results */
+  .results-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  @media (max-width: 600px) { .results-grid { grid-template-columns: 1fr; } }
+
+  .result-card {
+    border-radius: var(--radius);
+    padding: 20px;
+  }
+  .result-card.primary {
+    background: linear-gradient(135deg, #4338ca 0%, #6366f1 100%);
+    color: #fff;
+  }
+  .result-card.accent {
+    background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+    color: #fff;
+  }
+  .result-card.neutral {
+    background: #f8fafc;
+    border: 1px solid var(--border);
+  }
+  .result-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    opacity: 0.85;
+    margin-bottom: 6px;
+  }
+  .result-card.neutral .result-label { color: var(--text-light); }
+  .result-value {
+    font-family: var(--mono);
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+  }
+  .result-card.neutral .result-value {
+    font-size: 22px;
+    color: var(--text);
+  }
+
+  /* Detail toggle */
+  .detail-toggle {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    background: var(--primary-light);
+    color: var(--primary);
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  .detail-toggle:hover { background: #c7d2fe; }
+
+  /* Detail section */
+  .detail-section { margin-top: 20px; }
+  .detail-params {
+    background: #f8fafc;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  .detail-params h4 {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-mid);
+    margin-bottom: 8px;
+  }
+  .detail-params ul {
+    list-style: none;
+    font-size: 13px;
+    color: var(--text-mid);
+  }
+  .detail-params li { padding: 2px 0; }
+  .detail-params li::before { content: "· "; font-weight: 700; color: var(--primary); }
+  .detail-params .val { font-weight: 600; color: var(--text); }
+
+  .component-block {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 16px;
+    margin-bottom: 16px;
+  }
+  .component-block:last-child { border-bottom: none; margin-bottom: 0; }
+  .component-block h4 {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 10px;
+  }
+  .component-detail {
+    background: #f8fafc;
+    border-radius: 8px;
+    padding: 14px;
+    font-size: 13px;
+    color: var(--text-mid);
+  }
+  .component-detail .desc { margin-bottom: 6px; }
+  .component-detail .line { padding: 2px 0; }
+  .component-detail .highlight {
+    color: var(--primary);
+    font-weight: 700;
+  }
+
+  .total-box {
+    background: var(--primary-light);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-top: 16px;
+  }
+  .total-box h4 {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 12px;
+  }
+  .total-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    padding: 3px 0;
+    color: var(--text-mid);
+  }
+  .total-row .val { font-weight: 600; color: var(--text); }
+  .total-row.primary-val .val { color: var(--primary); font-weight: 700; }
+  .total-row.accent-val .val { color: var(--accent-dark); font-weight: 700; }
+  .total-row.border-top { border-top: 1px solid #c7d2fe; margin-top: 6px; padding-top: 8px; }
+
+  .footer {
+    text-align: center;
+    font-size: 11px;
+    color: var(--text-light);
+    margin-top: 20px;
+    padding-bottom: 12px;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <div class="header-icon">⚡</div>
+    <div>
+      <h1>Asana Pricing Calculator</h1>
+      <p>Kalkulačka partnerských nákupních cen</p>
+    </div>
+  </div>
+
+  <!-- Settings Card -->
+  <div class="card">
+    <div class="card-title">Základní nastavení</div>
+    <div class="grid-2" style="margin-bottom:16px">
+      <div>
+        <label class="field-label">Partner Tier</label>
+        <select id="partnerTier">
+          <option value="silver">Silver</option>
+          <option value="gold" selected>Gold</option>
+          <option value="platinum">Platinum</option>
+        </select>
+      </div>
+      <div>
+        <label class="field-label">Měna</label>
+        <select id="currency">
+          <option value="EUR">EUR (€)</option>
+          <option value="USD">USD ($)</option>
+        </select>
+      </div>
+    </div>
+
+    <label class="field-label">Typ dealu</label>
+    <div class="deal-types" style="margin-bottom:16px">
+      <button class="deal-btn active" data-deal="new" onclick="setDealType('new')">
+        <div class="deal-label">✨ Nový obchod</div>
+        <div class="deal-sub">Od nuly</div>
+      </button>
+      <button class="deal-btn" data-deal="mta" onclick="setDealType('mta')">
+        <div class="deal-label">🔄 MTA</div>
+        <div class="deal-sub">Monthly → Annual</div>
+      </button>
+      <button class="deal-btn" data-deal="ata" onclick="setDealType('ata')">
+        <div class="deal-label">🔁 ATA</div>
+        <div class="deal-sub">Annual → Annual</div>
+      </button>
+    </div>
+
+    <!-- New deal section -->
+    <div id="section-new">
+      <div class="divider"></div>
+      <div class="card-title">Nová nabídka</div>
+      <div class="grid-3">
+        <div>
+          <label class="field-label">Tarif</label>
+          <select id="newTariff" onchange="recalc()">
+            <option value="starter">Starter</option>
+            <option value="advanced" selected>Advanced</option>
+            <option value="enterprise">Enterprise</option>
+            <option value="enterprise+">Enterprise+</option>
+          </select>
+        </div>
+        <div>
+          <label class="field-label">Billing</label>
+          <select id="newBilling" onchange="recalc()">
+            <option value="monthly">Monthly</option>
+            <option value="annual" selected>Annual</option>
+          </select>
+        </div>
+        <div>
+          <label class="field-label">Počet licencí</label>
+          <input type="number" id="newSeats" value="20" min="1" oninput="recalc()">
+        </div>
+      </div>
+    </div>
+
+    <!-- MTA / ATA section -->
+    <div id="section-transfer" style="display:none">
+      <div class="divider"></div>
+      <div class="card-title">Stávající smlouva zákazníka</div>
+      <div class="grid-3" style="margin-bottom:16px">
+        <div>
+          <label class="field-label">Současný tarif</label>
+          <select id="currentTariff" onchange="recalc()">
+            <option value="starter" selected>Starter</option>
+            <option value="advanced">Advanced</option>
+            <option value="enterprise">Enterprise</option>
+            <option value="enterprise+">Enterprise+</option>
+          </select>
+        </div>
+        <div>
+          <label class="field-label">Billing</label>
+          <input type="text" id="currentBilling" value="Monthly" disabled>
+        </div>
+        <div>
+          <label class="field-label">Počet stávajících licencí</label>
+          <input type="number" id="currentSeats" value="20" min="1" oninput="recalc()">
+        </div>
+      </div>
+
+      <div class="card-title">Nová nabídka</div>
+      <div class="grid-2" style="margin-bottom:8px">
+        <div>
+          <label class="field-label">Nový tarif</label>
+          <select id="proposedTariff" onchange="recalc()">
+            <option value="starter">Starter</option>
+            <option value="advanced" selected>Advanced</option>
+            <option value="enterprise">Enterprise</option>
+            <option value="enterprise+">Enterprise+</option>
+          </select>
+        </div>
+        <div>
+          <label class="field-label">Počet licencí celkem</label>
+          <input type="number" id="proposedSeats" value="60" min="1" oninput="recalc()">
+        </div>
+      </div>
+      <div id="checkboxes"></div>
+    </div>
+  </div>
+
+  <!-- Results Card -->
+  <div class="card">
+    <div class="card-title">Výsledky kalkulace</div>
+    <div class="results-grid" id="resultsGrid"></div>
+    <button class="detail-toggle" id="detailToggle" onclick="toggleDetail()">
+      ▼ Zobrazit detail výpočtu
+    </button>
+    <div class="detail-section" id="detailSection" style="display:none"></div>
+  </div>
+
+  <div class="footer">Asana Partner Pricing Calculator · Worki · <span id="yearFooter"></span></div>
+</div>
+
+<script>
+const pricing = {
+  EUR: {
+    monthly: { starter: 13.49, advanced: 30.49 },
+    annual: { starter: 10.99, advanced: 24.49, enterprise: 29.00, 'enterprise+': 39.00 }
+  },
+  USD: {
+    monthly: { starter: 13.49, advanced: 30.49 },
+    annual: { starter: 10.99, advanced: 24.99, enterprise: 30.49, 'enterprise+': 40.99 }
+  }
+};
+
+const commissions = {
+  silver: { new: 0.30, mta: 0.10, ata: 0, expansion: 0.30 },
+  gold: { new: 0.35, mta: 0.12, ata: 0, expansion: 0.35 },
+  platinum: { new: 0.40, mta: 0.15, ata: 0, expansion: 0.40 }
+};
+
+const tariffLevels = { starter: 1, advanced: 2, enterprise: 3, 'enterprise+': 4 };
+
+let dealType = 'new';
+let showDetail = false;
+let includeExpansion = true;
+let includeUpgrade = true;
+
+document.getElementById('yearFooter').textContent = new Date().getFullYear();
+
+// Bind change events for recalculation
+['partnerTier', 'currency'].forEach(id => {
+  document.getElementById(id).addEventListener('change', recalc);
+});
+
+function setDealType(type) {
+  dealType = type;
+  document.querySelectorAll('.deal-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.deal === type);
+  });
+  document.getElementById('section-new').style.display = type === 'new' ? '' : 'none';
+  document.getElementById('section-transfer').style.display = type !== 'new' ? '' : 'none';
+  if (type === 'mta') document.getElementById('currentBilling').value = 'Monthly';
+  if (type === 'ata') document.getElementById('currentBilling').value = 'Annual';
+  recalc();
+}
+
+function val(id) { return document.getElementById(id).value; }
+function num(id) { return parseInt(document.getElementById(id).value) || 0; }
+
+function getPrice(tariff, billing) {
+  const cur = val('currency');
+  return pricing[cur][billing][tariff] || 0;
+}
+
+function fmt(amount) {
+  const sym = val('currency') === 'EUR' ? '€' : '$';
+  return sym + amount.toLocaleString('cs-CZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function recalc() {
+  updateCheckboxes();
+  const results = calculate();
+  renderResults(results);
+  if (showDetail) renderDetail(results);
+}
+
+function updateCheckboxes() {
+  if (dealType === 'new') return;
+  const cSeats = num('currentSeats');
+  const pSeats = num('proposedSeats');
+  const cTariff = val('currentTariff');
+  const pTariff = val('proposedTariff');
+  let html = '';
+  if (pSeats > cSeats) {
+    html += `<label class="checkbox-row"><input type="checkbox" id="chkExpansion" ${includeExpansion ? 'checked' : ''} onchange="includeExpansion=this.checked;recalc()"><span>Zahrnout seat expansion (${pSeats - cSeats} nových licencí)</span></label>`;
+  }
+  if (tariffLevels[pTariff] > tariffLevels[cTariff]) {
+    html += `<label class="checkbox-row"><input type="checkbox" id="chkUpgrade" ${includeUpgrade ? 'checked' : ''} onchange="includeUpgrade=this.checked;recalc()"><span>Zahrnout tarif upgrade (${cTariff} → ${pTariff})</span></label>`;
+  }
+  document.getElementById('checkboxes').innerHTML = html;
+}
+
+function calculate() {
+  if (dealType === 'new') return calcNew();
+  return calcTransfer();
+}
+
+function calcNew() {
+  const tariff = val('newTariff');
+  const billing = val('newBilling');
+  const seats = num('newSeats');
+  const tier = val('partnerTier');
+  const price = getPrice(tariff, billing);
+  const arr = price * seats * 12;
+  const disc = commissions[tier].new;
+  const buy = arr * (1 - disc);
+  return {
+    listPriceARR: arr,
+    partnerBuyPrice: buy,
+    discount: disc,
+    savings: arr - buy,
+    components: [{ name: 'Nový obchod', description: `${seats}× ${tariff} (${billing})`, seats, tariff, billing, listPrice: arr, discount: disc, partnerPrice: buy }]
+  };
+}
+
+function calcTransfer() {
+  const tier = val('partnerTier');
+  const cTariff = val('currentTariff');
+  const pTariff = val('proposedTariff');
+  const cSeats = num('currentSeats');
+  const pSeats = num('proposedSeats');
+  const components = [];
+  let totalList = 0, totalPartner = 0;
+
+  const baseSeats = Math.min(cSeats, pSeats);
+  const basePrice = getPrice(cTariff, 'annual');
+  const baseList = basePrice * baseSeats * 12;
+  const baseDisc = commissions[tier][dealType];
+  const baseBuy = baseList * (1 - baseDisc);
+  components.push({
+    name: dealType === 'mta' ? 'MTA Base' : 'ATA Base',
+    description: `Převod ${baseSeats} ${cTariff} licencí na Annual`,
+    seats: baseSeats, tariff: cTariff, listPrice: baseList, discount: baseDisc, partnerPrice: baseBuy
+  });
+  totalList += baseList;
+  totalPartner += baseBuy;
+
+  if (includeUpgrade && tariffLevels[pTariff] > tariffLevels[cTariff]) {
+    const cAnnual = getPrice(cTariff, 'annual');
+    const pAnnual = getPrice(pTariff, 'annual');
+    const diff = (pAnnual - cAnnual) * baseSeats * 12;
+    const uDisc = commissions[tier].expansion;
+    const uBuy = diff * (1 - uDisc);
+    components.push({
+      name: 'Tarif Upgrade',
+      description: `Upgrade ${baseSeats}× ${cTariff} → ${pTariff}`,
+      seats: baseSeats, tariff: `${cTariff} → ${pTariff}`, listPrice: diff, discount: uDisc, partnerPrice: uBuy
+    });
+    totalList += diff;
+    totalPartner += uBuy;
+  }
+
+  if (includeExpansion && pSeats > cSeats) {
+    const expSeats = pSeats - cSeats;
+    const finalTariff = includeUpgrade ? pTariff : cTariff;
+    const expPrice = getPrice(finalTariff, 'annual');
+    const expList = expPrice * expSeats * 12;
+    const eDisc = commissions[tier].expansion;
+    const eBuy = expList * (1 - eDisc);
+    components.push({
+      name: 'Seat Expansion',
+      description: `Přidání ${expSeats} nových ${finalTariff} licencí`,
+      seats: expSeats, tariff: finalTariff, listPrice: expList, discount: eDisc, partnerPrice: eBuy
+    });
+    totalList += expList;
+    totalPartner += eBuy;
+  }
+
+  const effDisc = totalList > 0 ? (totalList - totalPartner) / totalList : 0;
+  return { listPriceARR: totalList, partnerBuyPrice: totalPartner, discount: effDisc, savings: totalList - totalPartner, components };
+}
+
+function renderResults(r) {
+  document.getElementById('resultsGrid').innerHTML = `
+    <div class="result-card primary">
+      <div class="result-label">Celková nákupní cena (roční)</div>
+      <div class="result-value">${fmt(r.partnerBuyPrice)}</div>
+    </div>
+    <div class="result-card accent">
+      <div class="result-label">Efektivní partnerská sleva</div>
+      <div class="result-value">${(r.discount * 100).toFixed(2)}%</div>
+    </div>
+    <div class="result-card neutral">
+      <div class="result-label">List Price (ARR celkem)</div>
+      <div class="result-value">${fmt(r.listPriceARR)}</div>
+    </div>
+    <div class="result-card neutral">
+      <div class="result-label">Vaše úspora</div>
+      <div class="result-value">${fmt(r.savings)}</div>
+    </div>
+  `;
+}
+
+function toggleDetail() {
+  showDetail = !showDetail;
+  const sec = document.getElementById('detailSection');
+  const btn = document.getElementById('detailToggle');
+  sec.style.display = showDetail ? '' : 'none';
+  btn.innerHTML = showDetail ? '▲ Skrýt detail výpočtu' : '▼ Zobrazit detail výpočtu';
+  if (showDetail) renderDetail(calculate());
+}
+
+function renderDetail(r) {
+  const tier = val('partnerTier');
+  let dealLabel = dealType === 'new' ? 'Nový obchod' : dealType === 'mta' ? 'Monthly to Annual Takeover' : 'Annual to Annual Takeover';
+  let paramsHtml = `
+    <li>Partner Tier: <span class="val">${tier.charAt(0).toUpperCase() + tier.slice(1)}</span></li>
+    <li>Typ dealu: <span class="val">${dealLabel}</span></li>
+  `;
+  if (dealType !== 'new') {
+    paramsHtml += `
+      <li>Stávající: <span class="val">${num('currentSeats')} ${val('currentTariff')} ${dealType === 'mta' ? 'Monthly' : 'Annual'}</span></li>
+      <li>Nová nabídka: <span class="val">${num('proposedSeats')} ${val('proposedTariff')} Annual</span></li>
+    `;
+  }
+
+  let componentsHtml = r.components.map((c, i) => `
+    <div class="component-block">
+      <h4>💼 Komponenta ${i + 1}: ${c.name}</h4>
+      <div class="component-detail">
+        <div class="desc">${c.description}</div>
+        <div class="line">List Price: <strong>${fmt(c.listPrice)}</strong></div>
+        <div class="line">Partner Discount: <strong>${(c.discount * 100).toFixed(0)}%</strong> (${tier} tier)</div>
+        <div class="line highlight">Partner Buy Price: ${fmt(c.partnerPrice)}</div>
+      </div>
+    </div>
+  `).join('');
+
+  document.getElementById('detailSection').innerHTML = `
+    <div class="detail-params">
+      <h4>📋 Zadané parametry:</h4>
+      <ul>${paramsHtml}</ul>
+    </div>
+    ${componentsHtml}
+    <div class="total-box">
+      <h4>CELKEM</h4>
+      <div class="total-row"><span>List Price ARR:</span><span class="val">${fmt(r.listPriceARR)}</span></div>
+      <div class="total-row primary-val"><span>Partner Buy Price:</span><span class="val">${fmt(r.partnerBuyPrice)}</span></div>
+      <div class="total-row"><span>Efektivní sleva:</span><span class="val" style="color:var(--accent-dark)">${(r.discount * 100).toFixed(2)}%</span></div>
+      <div class="total-row accent-val border-top"><span>Vaše úspora:</span><span class="val">${fmt(r.savings)}</span></div>
+    </div>
+  `;
+}
+
+// Initial render
+recalc();
+</script>
+</body>
+</html>
