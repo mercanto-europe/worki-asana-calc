@@ -520,7 +520,7 @@
   <div class="footer">Asana Partner Pricing Calculator · Worki · <span id="yearFooter"></span></div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js" crossorigin="anonymous"></script>
 <script>
 const pricing = {
   EUR: {
@@ -811,11 +811,79 @@ if (window.location.search.includes('print=1')) {
 }
 
 function openForPrint() {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
-  const r = calculate();
-  const tier = val('partnerTier');
-  let dealLabel = dealType === 'new' ? 'Nový obchod' : dealType === 'mta' ? 'MTA (Monthly to Annual)' : 'ATA (Annual to Annual)';
+  var r = calculate();
+  var tier = val('partnerTier');
+  var dealLabel = dealType === 'new' ? 'Novy obchod' : dealType === 'mta' ? 'MTA (Monthly to Annual)' : 'ATA (Annual to Annual)';
+  
+  // Try jsPDF first
+  if (window.jspdf && window.jspdf.jsPDF) {
+    try {
+      generatePDF(r, tier, dealLabel);
+      return;
+    } catch(e) {
+      console.error('jsPDF error:', e);
+    }
+  }
+  
+  // Fallback: generate printable HTML file
+  generateHTMLReport(r, tier, dealLabel);
+}
+
+function generateHTMLReport(r, tier, dealLabel) {
+  var custDisc = parseFloat(document.getElementById('customerDiscount').value) || 0;
+  var custSection = '';
+  if (custDisc > 0) {
+    var custPrice = r.listPriceARR * (1 - custDisc / 100);
+    var margin = custPrice - r.partnerBuyPrice;
+    var marginPct = custPrice > 0 ? (margin / custPrice) * 100 : 0;
+    custSection = '<tr><td colspan="2" style="padding-top:16px;font-weight:bold;font-size:14px">Sleva pro zakaznika: ' + custDisc + '%</td></tr>' +
+      '<tr><td>Cena pro zakaznika:</td><td style="text-align:right;font-weight:bold">' + fmt(custPrice) + '</td></tr>' +
+      '<tr><td>Marze:</td><td style="text-align:right;font-weight:bold;color:' + (margin > 0 ? '#059669' : '#dc2626') + '">' + fmt(margin) + ' (' + marginPct.toFixed(1) + '%)</td></tr>';
+  }
+  
+  var compRows = '';
+  r.components.forEach(function(c, i) {
+    compRows += '<tr style="border-top:1px solid #e2e8f0"><td colspan="2" style="padding-top:12px;font-weight:bold">' + c.name + '</td></tr>' +
+      '<tr><td style="padding-left:12px">' + c.description + '</td><td></td></tr>' +
+      '<tr><td style="padding-left:12px">List Price:</td><td style="text-align:right">' + fmt(c.listPrice) + '</td></tr>' +
+      '<tr><td style="padding-left:12px">Discount:</td><td style="text-align:right">' + (c.discount * 100).toFixed(0) + '% (' + tier + ')</td></tr>' +
+      '<tr><td style="padding-left:12px;font-weight:bold;color:#4338ca">Partner Buy Price:</td><td style="text-align:right;font-weight:bold;color:#4338ca">' + fmt(c.partnerPrice) + '</td></tr>';
+  });
+
+  var params = '';
+  if (dealType === 'new') {
+    params = 'Tarif: ' + val('newTariff') + ' (' + val('newBilling') + ') | Licence: ' + num('newSeats');
+  } else {
+    params = 'Stavajici: ' + num('currentSeats') + 'x ' + val('currentTariff') + ' ' + (dealType === 'mta' ? 'Monthly' : 'Annual') + ' &rarr; Nove: ' + num('proposedSeats') + 'x ' + val('proposedTariff') + ' Annual';
+  }
+
+  var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Asana Pricing - ' + dealLabel + '</title>' +
+    '<style>body{font-family:Helvetica,Arial,sans-serif;max-width:700px;margin:40px auto;color:#1e293b;font-size:13px}' +
+    'h1{font-size:20px;margin-bottom:4px}table{width:100%;border-collapse:collapse}td{padding:4px 8px}' +
+    '.subtitle{color:#94a3b8;font-size:11px;margin-bottom:20px}hr{border:none;border-top:1px solid #e2e8f0;margin:16px 0}' +
+    '@media print{body{margin:20px}}</style></head><body>' +
+    '<h1>Asana Pricing Calculator</h1>' +
+    '<div class="subtitle">Typ: ' + dealLabel + ' | Tier: ' + tier + ' | Mena: ' + val('currency') + '<br>' + params + 
+    '<br>Vygenerovano: ' + new Date().toLocaleDateString('cs-CZ') + ' ' + new Date().toLocaleTimeString('cs-CZ', {hour:'2-digit',minute:'2-digit'}) + '</div>' +
+    '<hr><table>' +
+    '<tr><td>List Price (ARR celkem):</td><td style="text-align:right;font-weight:bold">' + fmt(r.listPriceARR) + '</td></tr>' +
+    '<tr><td>Celkova nakupni cena (rocni):</td><td style="text-align:right;font-weight:bold;color:#4338ca">' + fmt(r.partnerBuyPrice) + '</td></tr>' +
+    '<tr><td>Efektivni partnerska sleva:</td><td style="text-align:right;font-weight:bold;color:#059669">' + (r.discount * 100).toFixed(2) + '%</td></tr>' +
+    '<tr><td>Uspora:</td><td style="text-align:right;font-weight:bold;color:#059669">' + fmt(r.savings) + '</td></tr>' +
+    custSection +
+    '</table><hr><h2 style="font-size:14px">Detail rozkladu</h2><table>' + compRows + '</table>' +
+    '<hr><div style="font-size:9px;color:#94a3b8">Asana Partner Pricing Calculator | Worki | ' + new Date().getFullYear() + '</div>' +
+    '<script>window.onload=function(){window.print()}<\/script>' +
+    '</body></html>';
+  
+  var blob = new Blob([html], {type: 'text/html'});
+  var url = URL.createObjectURL(blob);
+  window.open(url, '_blank');
+}
+
+function generatePDF(r, tier, dealLabel) {
+  var jsPDF = window.jspdf.jsPDF;
+  var doc = new jsPDF();
   
   let y = 20;
   const left = 20;
