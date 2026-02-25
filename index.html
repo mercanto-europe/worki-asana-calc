@@ -512,7 +512,7 @@
     </button>
     <div class="detail-section" id="detailSection" style="display:none"></div>
     <div class="action-bar">
-      <button class="action-btn" id="btnPrint">🖨️ Tisk / PDF</button>
+      <button class="action-btn" id="btnPrint">📄 Stáhnout PDF</button>
       <button class="action-btn" id="btnCopy">📋 Kopírovat výsledky</button>
     </div>
   </div>
@@ -520,6 +520,7 @@
   <div class="footer">Asana Partner Pricing Calculator · Worki · <span id="yearFooter"></span></div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js"></script>
 <script>
 const pricing = {
   EUR: {
@@ -810,24 +811,164 @@ if (window.location.search.includes('print=1')) {
 }
 
 function openForPrint() {
-  // Prepare print content
-  try {
-    const r = calculate();
-    const tier = val('partnerTier');
-    let dealLabel = dealType === 'new' ? 'Nový obchod' : dealType === 'mta' ? 'MTA (Monthly → Annual)' : 'ATA (Annual → Annual)';
-    let params = '<strong>Typ:</strong> ' + dealLabel + ' · <strong>Tier:</strong> ' + tier.charAt(0).toUpperCase() + tier.slice(1) + ' · <strong>Měna:</strong> ' + val('currency');
-    if (dealType === 'new') {
-      params += '<br><strong>Tarif:</strong> ' + val('newTariff') + ' (' + val('newBilling') + ') · <strong>Licence:</strong> ' + num('newSeats');
-    } else {
-      params += '<br><strong>Stávající:</strong> ' + num('currentSeats') + '× ' + val('currentTariff') + ' ' + (dealType === 'mta' ? 'Monthly' : 'Annual') + ' → <strong>Nové:</strong> ' + num('proposedSeats') + '× ' + val('proposedTariff') + ' Annual';
-    }
-    params += '<div class="print-date">Vygenerováno: ' + new Date().toLocaleDateString('cs-CZ') + ' ' + new Date().toLocaleTimeString('cs-CZ', {hour:'2-digit',minute:'2-digit'}) + '</div>';
-    document.getElementById('printSummary').innerHTML = params;
-    renderDetail(r);
-  } catch(e) {
-    console.error('Print prep error:', e);
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const r = calculate();
+  const tier = val('partnerTier');
+  let dealLabel = dealType === 'new' ? 'Nový obchod' : dealType === 'mta' ? 'MTA (Monthly to Annual)' : 'ATA (Annual to Annual)';
+  
+  let y = 20;
+  const left = 20;
+  const right = 190;
+  
+  // Title
+  doc.setFontSize(20);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Asana Pricing Calculator', left, y);
+  y += 8;
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(120);
+  doc.text('Kalkulace partnerskych nakupnich cen', left, y);
+  y += 4;
+  doc.text('Vygenerovano: ' + new Date().toLocaleDateString('cs-CZ') + ' ' + new Date().toLocaleTimeString('cs-CZ', {hour:'2-digit',minute:'2-digit'}), left, y);
+  y += 12;
+  
+  // Divider
+  doc.setDrawColor(200);
+  doc.line(left, y, right, y);
+  y += 10;
+  
+  // Parameters
+  doc.setTextColor(60);
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Parametry', left, y);
+  y += 8;
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Typ dealu: ' + dealLabel, left, y); y += 6;
+  doc.text('Partner Tier: ' + tier.charAt(0).toUpperCase() + tier.slice(1), left, y); y += 6;
+  doc.text('Mena: ' + val('currency'), left, y); y += 6;
+  
+  if (dealType === 'new') {
+    doc.text('Tarif: ' + val('newTariff') + ' (' + val('newBilling') + ')', left, y); y += 6;
+    doc.text('Pocet licenci: ' + num('newSeats'), left, y); y += 6;
+  } else {
+    doc.text('Stavajici: ' + num('currentSeats') + 'x ' + val('currentTariff') + ' ' + (dealType === 'mta' ? 'Monthly' : 'Annual'), left, y); y += 6;
+    doc.text('Nova nabidka: ' + num('proposedSeats') + 'x ' + val('proposedTariff') + ' Annual', left, y); y += 6;
   }
-  window.print();
+  y += 6;
+  
+  // Divider
+  doc.line(left, y, right, y);
+  y += 10;
+  
+  // Results
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Vysledky kalkulace', left, y);
+  y += 10;
+  
+  doc.setFontSize(10);
+  var col1 = left;
+  var col2 = 120;
+  
+  doc.setFont('helvetica', 'normal');
+  doc.text('List Price (ARR celkem):', col1, y);
+  doc.setFont('helvetica', 'bold');
+  doc.text(fmt(r.listPriceARR), col2, y);
+  y += 7;
+  
+  doc.setFont('helvetica', 'normal');
+  doc.text('Celkova nakupni cena (rocni):', col1, y);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(67, 56, 202);
+  doc.text(fmt(r.partnerBuyPrice), col2, y);
+  y += 7;
+  
+  doc.setTextColor(60);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Efektivni partnerska sleva:', col1, y);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(5, 150, 105);
+  doc.text((r.discount * 100).toFixed(2) + '%', col2, y);
+  y += 7;
+  
+  doc.setTextColor(60);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Vase uspora:', col1, y);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(5, 150, 105);
+  doc.text(fmt(r.savings), col2, y);
+  y += 10;
+  
+  // Customer discount
+  var custDisc = parseFloat(document.getElementById('customerDiscount').value) || 0;
+  if (custDisc > 0) {
+    doc.setTextColor(60);
+    doc.line(left, y, right, y);
+    y += 10;
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Sleva pro zakaznika: ' + custDisc + '%', left, y);
+    y += 10;
+    doc.setFontSize(10);
+    
+    var custPrice = r.listPriceARR * (1 - custDisc / 100);
+    var margin = custPrice - r.partnerBuyPrice;
+    var marginPct = custPrice > 0 ? (margin / custPrice) * 100 : 0;
+    
+    doc.setFont('helvetica', 'normal');
+    doc.text('Cena pro zakaznika:', col1, y);
+    doc.setFont('helvetica', 'bold');
+    doc.text(fmt(custPrice), col2, y);
+    y += 7;
+    
+    doc.setFont('helvetica', 'normal');
+    doc.text('Vase marze:', col1, y);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(margin > 0 ? 5 : 220, margin > 0 ? 150 : 38, margin > 0 ? 105 : 38);
+    doc.text(fmt(margin) + ' (' + marginPct.toFixed(1) + '%)', col2, y);
+    y += 10;
+  }
+  
+  // Components detail
+  doc.setTextColor(60);
+  doc.line(left, y, right, y);
+  y += 10;
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Detail rozkladu', left, y);
+  y += 10;
+  
+  r.components.forEach(function(c, i) {
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(60);
+    doc.text('Komponenta ' + (i + 1) + ': ' + c.name, left, y);
+    y += 6;
+    doc.setFont('helvetica', 'normal');
+    doc.text(c.description, left + 4, y); y += 6;
+    doc.text('List Price: ' + fmt(c.listPrice), left + 4, y); y += 6;
+    doc.text('Discount: ' + (c.discount * 100).toFixed(0) + '% (' + tier + ')', left + 4, y); y += 6;
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(67, 56, 202);
+    doc.text('Partner Buy Price: ' + fmt(c.partnerPrice), left + 4, y);
+    doc.setTextColor(60);
+    y += 10;
+  });
+  
+  // Footer
+  y += 5;
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(150);
+  doc.text('Asana Partner Pricing Calculator | Worki | ' + new Date().getFullYear(), left, y);
+  
+  // Save
+  var filename = 'asana-pricing-' + dealLabel.replace(/[^a-zA-Z]/g, '-').toLowerCase() + '-' + new Date().toISOString().slice(0, 10) + '.pdf';
+  doc.save(filename);
 }
 
 function copyResults() {
