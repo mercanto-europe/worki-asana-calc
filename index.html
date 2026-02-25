@@ -512,8 +512,8 @@
     </button>
     <div class="detail-section" id="detailSection" style="display:none"></div>
     <div class="action-bar">
-      <button class="action-btn" onclick="openForPrint()">🖨️ Tisk / PDF</button>
-      <button class="action-btn" onclick="copyResults()">📋 Kopírovat výsledky</button>
+      <button class="action-btn" id="btnPrint">🖨️ Tisk / PDF</button>
+      <button class="action-btn" id="btnCopy">📋 Kopírovat výsledky</button>
     </div>
   </div>
 
@@ -786,6 +786,10 @@ function renderDetail(r) {
 // Initial render
 recalc();
 
+// Bind action buttons
+document.getElementById('btnPrint').addEventListener('click', function() { openForPrint(); });
+document.getElementById('btnCopy').addEventListener('click', function() { copyResults(); });
+
 // Auto-print if opened with ?print parameter
 if (window.location.search.includes('print=1')) {
   setTimeout(() => {
@@ -806,25 +810,23 @@ if (window.location.search.includes('print=1')) {
 }
 
 function openForPrint() {
-  if (window.self !== window.top) {
-    // Inside iframe - open in new window with print trigger
-    const url = window.location.href.split('?')[0] + '?print=1';
-    window.open(url, '_blank');
-    return;
+  // Prepare print content
+  try {
+    const r = calculate();
+    const tier = val('partnerTier');
+    let dealLabel = dealType === 'new' ? 'Nový obchod' : dealType === 'mta' ? 'MTA (Monthly → Annual)' : 'ATA (Annual → Annual)';
+    let params = '<strong>Typ:</strong> ' + dealLabel + ' · <strong>Tier:</strong> ' + tier.charAt(0).toUpperCase() + tier.slice(1) + ' · <strong>Měna:</strong> ' + val('currency');
+    if (dealType === 'new') {
+      params += '<br><strong>Tarif:</strong> ' + val('newTariff') + ' (' + val('newBilling') + ') · <strong>Licence:</strong> ' + num('newSeats');
+    } else {
+      params += '<br><strong>Stávající:</strong> ' + num('currentSeats') + '× ' + val('currentTariff') + ' ' + (dealType === 'mta' ? 'Monthly' : 'Annual') + ' → <strong>Nové:</strong> ' + num('proposedSeats') + '× ' + val('proposedTariff') + ' Annual';
+    }
+    params += '<div class="print-date">Vygenerováno: ' + new Date().toLocaleDateString('cs-CZ') + ' ' + new Date().toLocaleTimeString('cs-CZ', {hour:'2-digit',minute:'2-digit'}) + '</div>';
+    document.getElementById('printSummary').innerHTML = params;
+    renderDetail(r);
+  } catch(e) {
+    console.error('Print prep error:', e);
   }
-  // Standalone - print directly
-  const r = calculate();
-  const tier = val('partnerTier');
-  let dealLabel = dealType === 'new' ? 'Nový obchod' : dealType === 'mta' ? 'MTA (Monthly → Annual)' : 'ATA (Annual → Annual)';
-  let params = `<strong>Typ:</strong> ${dealLabel} · <strong>Tier:</strong> ${tier.charAt(0).toUpperCase() + tier.slice(1)} · <strong>Měna:</strong> ${val('currency')}`;
-  if (dealType === 'new') {
-    params += `<br><strong>Tarif:</strong> ${val('newTariff')} (${val('newBilling')}) · <strong>Licence:</strong> ${num('newSeats')}`;
-  } else {
-    params += `<br><strong>Stávající:</strong> ${num('currentSeats')}× ${val('currentTariff')} ${dealType === 'mta' ? 'Monthly' : 'Annual'} → <strong>Nové:</strong> ${num('proposedSeats')}× ${val('proposedTariff')} Annual`;
-  }
-  params += `<div class="print-date">Vygenerováno: ${new Date().toLocaleDateString('cs-CZ')} ${new Date().toLocaleTimeString('cs-CZ', {hour:'2-digit',minute:'2-digit'})}</div>`;
-  document.getElementById('printSummary').innerHTML = params;
-  renderDetail(r);
   window.print();
 }
 
