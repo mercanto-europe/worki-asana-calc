@@ -511,7 +511,7 @@
     </button>
     <div class="detail-section" id="detailSection" style="display:none"></div>
     <div class="action-bar">
-      <button class="action-btn" onclick="printCalc()">🖨️ Tisk / PDF</button>
+      <button class="action-btn" onclick="openForPrint()">🖨️ Tisk / PDF</button>
       <button class="action-btn" onclick="copyResults()">📋 Kopírovat výsledky</button>
     </div>
   </div>
@@ -785,7 +785,13 @@ function renderDetail(r) {
 // Initial render
 recalc();
 
-function printCalc() {
+function openForPrint() {
+  // If inside iframe, open in new window first
+  if (window.self !== window.top) {
+    window.open(window.location.href, '_blank');
+    return;
+  }
+  // If already in standalone window, print directly
   const r = calculate();
   const tier = val('partnerTier');
   let dealLabel = dealType === 'new' ? 'Nový obchod' : dealType === 'mta' ? 'MTA (Monthly → Annual)' : 'ATA (Annual → Annual)';
@@ -797,8 +803,6 @@ function printCalc() {
   }
   params += `<div class="print-date">Vygenerováno: ${new Date().toLocaleDateString('cs-CZ')} ${new Date().toLocaleTimeString('cs-CZ', {hour:'2-digit',minute:'2-digit'})}</div>`;
   document.getElementById('printSummary').innerHTML = params;
-
-  // Ensure detail is rendered for print
   renderDetail(r);
   window.print();
 }
@@ -830,14 +834,38 @@ function copyResults() {
     text += `Marže: ${fmt(margin)} (${marginPct.toFixed(1)}%)`;
   }
 
-  navigator.clipboard.writeText(text).then(() => {
-    const btn = document.querySelector('.action-btn:last-child');
-    const orig = btn.innerHTML;
-    btn.innerHTML = '✅ Zkopírováno!';
-    btn.style.borderColor = 'var(--accent)';
-    btn.style.color = 'var(--accent-dark)';
-    setTimeout(() => { btn.innerHTML = orig; btn.style.borderColor = ''; btn.style.color = ''; }, 2000);
-  });
+  // Try clipboard API first, fallback to textarea method
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(() => showCopySuccess()).catch(() => fallbackCopy(text));
+  } else {
+    fallbackCopy(text);
+  }
+}
+
+function fallbackCopy(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.cssText = 'position:fixed;left:-9999px;top:-9999px';
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.select();
+  try {
+    document.execCommand('copy');
+    showCopySuccess();
+  } catch(e) {
+    // Last resort: show text in a prompt
+    prompt('Zkopírujte výsledky (Ctrl+C):', text);
+  }
+  document.body.removeChild(ta);
+}
+
+function showCopySuccess() {
+  const btn = document.querySelectorAll('.action-btn')[1];
+  const orig = btn.innerHTML;
+  btn.innerHTML = '✅ Zkopírováno!';
+  btn.style.borderColor = 'var(--accent)';
+  btn.style.color = 'var(--accent-dark)';
+  setTimeout(() => { btn.innerHTML = orig; btn.style.borderColor = ''; btn.style.color = ''; }, 2000);
 }
 </script>
 </body>
